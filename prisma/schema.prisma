@@ -6,18 +6,20 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  extensions = [postgis]
 }
 
-// enum UserRole {
-//   DEVELOPER
-//   CUSTOMER
-//   DRIVER
-// }
+enum UserRole {
+  DEVELOPER
+  CUSTOMER
+  DRIVER
+}
 
 model User {
   id            String    @id @default(cuid())
@@ -32,27 +34,33 @@ model User {
   refreshToken  String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  // role          UserRole  
+  roles         UserRole[]
 
-  // drivers Driver[]
-  // customers Customer[]
+  drivers Driver[]
+  customers Customer[]
 }
 
-// model Driver {
-//   id            String    @id @default(cuid())
-//   userId        String    @unique
-//   user          User      @relation(fields: [userId], references: [id])
-//   createdAt     DateTime  @default(now())
-//   updatedAt     DateTime  @updatedAt
-// }
+model Driver {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
 
-// model Customer {
-//   id            String    @id @default(cuid())
-//   userId        String    @unique
-//   user          User      @relation(fields: [userId], references: [id])
-//   createdAt     DateTime  @default(now())
-//   updatedAt     DateTime  @updatedAt
-// }
+model Customer {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
 
+
+model PointOfInterest {
+  id       Int                                   @id @default(autoincrement())
+  name     String
+  location Unsupported("geography(Point, 4326)")
+}
 
 
