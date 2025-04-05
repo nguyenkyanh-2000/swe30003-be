@@ -41,11 +41,12 @@ export class UserService {
   }
 
   async createUser(input: CreateUserInput): Promise<UserDto> {
-    const { email, password } = input;
+    const { email, password, role } = input;
 
     const user = await this.prisma.user.create({
       data: {
         ...input,
+        role,
         email,
         password: await hash(password, BCRYPT_SALT_ROUNDS),
         normalizedEmail: normalizeEmail(email) || email,
@@ -71,5 +72,14 @@ export class UserService {
     });
 
     return user;
+  }
+
+  async getCurrentCoordinates(userId: string) {
+    return this.prisma.user.findFirst({
+      where: { id: userId },
+      select: {
+        currentLocation: true,
+      },
+    });
   }
 }

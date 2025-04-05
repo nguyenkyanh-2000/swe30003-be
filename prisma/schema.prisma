@@ -34,10 +34,15 @@ model User {
   refreshToken  String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  roles         UserRole[]
+  role      UserRole
 
-  drivers Driver[]
-  customers Customer[]
+  driver Driver?
+  customer Customer?
+
+  currentLocationId String?
+  currentLocation Location? @relation(fields: [currentLocationId], references: [id])
+
+  @@index([id, email])
 }
 
 model Driver {
@@ -46,6 +51,8 @@ model Driver {
   user          User      @relation(fields: [userId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  rides Ride[]
 }
 
 model Customer {
@@ -54,13 +61,59 @@ model Customer {
   user          User      @relation(fields: [userId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  rides Ride[]
+}
+
+enum RideStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+}
+
+enum VehicleType {
+  BIKE
+  CAR
+  LUXURY
+}
+
+model Ride {
+  id            String    @id @default(cuid())
+  customerId    String
+  customer      Customer  @relation(fields: [customerId], references: [id])
+  driverId      String
+  driver        Driver    @relation(fields: [driverId], references: [id])
+
+  locations Location[]
+
+  vehicleType VehicleType @default(CAR)
+
+  price Float
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+
+
+  status RideStatus @default(PENDING)
+}
+
+model Location {
+  id String @id @default(cuid())
+  name String
+  coordinates Unsupported("geography(Point, 4326)")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rideId String?
+  ride Ride? @relation(fields: [rideId], references: [id])
+
+  users User[]
 }
 
 
-model PointOfInterest {
-  id       Int                                   @id @default(autoincrement())
-  name     String
-  location Unsupported("geography(Point, 4326)")
-}
+
+
 
 

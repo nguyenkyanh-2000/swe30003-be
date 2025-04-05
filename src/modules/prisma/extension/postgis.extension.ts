@@ -1,82 +1,71 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, Location } from '@prisma/client';
 import { PrismaProvider } from '../prisma.provider';
 
-export interface Location {
+export interface Coordinates {
   latitude: number;
   longitude: number;
-}
-
-export interface PointOfInterest {
-  name: string;
-  location: Location;
 }
 
 export const postgisExtension = Prisma.defineExtension({
   name: 'postgis-extension',
   model: {
-    pointOfInterest: {
+    location: {
+      needs: {
+        id: true,
+      },
       async create<T>(
         this: T,
         params: {
           data: {
             name: string;
-            latitude: number;
-            longitude: number;
+            coordinates: {
+              latitude: number;
+              longitude: number;
+            };
           };
         },
-      ): Promise<PointOfInterest> {
+      ): Promise<Location> {
         const { data } = params;
+        const { name, coordinates } = data;
+        const point = `POINT(${coordinates.longitude} ${coordinates.latitude})`;
 
-        // Create an object using the custom types
-        const poi: PointOfInterest = {
-          name: data.name,
-          location: {
-            latitude: data.latitude,
-            longitude: data.longitude,
-          },
-        };
+        const context = Prisma.getExtensionContext(this);
+        const provider = context.$parent as PrismaProvider;
 
-        // Insert the object into the database
-        const point = `POINT(${poi.location.longitude} ${poi.location.latitude})`;
-        const context = Prisma.getExtensionContext(this)
-          .$parent as PrismaProvider;
-
-        await context.$queryRaw`
-          INSERT INTO "PointOfInterest" (name, location) VALUES (${poi.name}, ST_GeomFromText(${point}, 4326));
+        const result = await provider.$queryRaw<Location>`
+          INSERT INTO "Location" (name, coordinates) VALUES (${name}, ST_GeomFromText(${point}, 4326));
         `;
 
         // Return the object
-        return poi;
+        return result;
       },
-
-      async findClosestPoints(latitude: number, longitude: number) {
-        const context = Prisma.getExtensionContext(this)
-          .$parent as PrismaProvider;
-
-        const result = await context.$queryRaw<
-          {
-            id: number | null;
-            name: string | null;
-            st_x: number | null;
-            st_y: number | null;
-          }[]
-        >`SELECT id, name, ST_X(location::geometry), ST_Y(location::geometry) 
-            FROM "PointOfInterest" 
-            ORDER BY ST_DistanceSphere(location::geometry, ST_MakePoint(${longitude}, ${latitude})) DESC`;
-
-        // Transform to our custom type
-        const pois: PointOfInterest[] = result.map((data) => {
-          return {
-            name: data.name,
-            location: {
-              latitude: data.st_y || 0,
-              longitude: data.st_x || 0,
-            },
+      async updateCoordinates<T>(
+        this: T,
+        params: {
+          data: {
+            coordinates: {
+              latitude: number;
+              longitude: number;
+            };
           };
-        });
+          id: string;
+        },
+      ): Promise<Location> {
+        const { data, id } = params;
+        const { coordinates } = data;
 
-        // Return data
-        return pois;
+        // Update the coordinates
+        const point = `POINT(${coordinates.longitude} ${coordinates.latitude})`;
+
+        const context = Prisma.getExtensionContext(this);
+        const provider = context.$parent as PrismaProvider;
+
+        const result = await provider.$queryRaw<Location>`
+          INSERT INTO "Location" (id, coordinates) VALUES (${id}, ST_GeomFromText(${point}, 4326)) ON CONFLICT (id) DO UPDATE SET coordinates = ST_GeomFromText(${point}, 4326);
+        `;
+
+        // Return the object
+        return result;
       },
     },
   },

@@ -1,5 +1,9 @@
 import { createZodDto } from 'nestjs-zod';
+import { UserRole } from '@prisma/client';
 import { CreateUserSchema, UpdateUserSchema } from './user.schema';
+import { LocationDtoRef } from '../ride/ride.dto';
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class UserDto {
   id: string;
@@ -11,6 +15,11 @@ export class UserDto {
   fullName?: string | null;
   phone?: string | null;
   profileImg?: string | null;
+  role?: UserRole | null;
+
+  @ApiProperty({ type: () => LocationDtoRef })
+  @Type(() => LocationDtoRef)
+  currentLocation?: LocationDtoRef;
 }
 
 export class CreateUserInput extends createZodDto(CreateUserSchema) {}
